@@ -60,6 +60,6 @@ class Listener:  # pylint: disable=too-many-instance-attributes
                 self._loop.create_task(self.handler(reader, writer)))
 
         self._server = await asyncio.start_server(_spawn,
-                                                  self._address,
-                                                  self._port)
+                                                  self._listen_address,
+                                                  self._listen_port)
         self._logger.info("Server ready.")

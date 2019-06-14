@@ -7,7 +7,7 @@ import signal
 from functools import partial
 from urllib.parse import urlparse
 
-#from sdnotify import SystemdNotifier
+from sdnotify import SystemdNotifier
 
 from .listener import Listener
 from .constants import LogLevel
@@ -88,8 +88,8 @@ async def amain(args, loop):  # pragma: no cover
         context = None
 
 
-    server = Listener(bind_address=args.bind_address,
-                      bind_port=args.bind_port,
+    server = Listener(listen_address=args.bind_address,
+                      listen_port=args.bind_port,
                       ssl_context=context,
                       dst_address=args.dst_address,
                       dst_port=args.dst_port,
@@ -116,8 +116,7 @@ async def amain(args, loop):  # pragma: no cover
 def main():  # pragma: no cover
     args = parse_args()
     logger = setup_logger('MAIN', args.verbosity)
-    setup_logger('Splitter', args.verbosity)
-    setup_logger('Fork', args.verbosity)
+    setup_logger('Listener', args.verbosity)
 
     logger.info("Starting eventloop...")
     if not args.disable_uvloop:
