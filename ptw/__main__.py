@@ -69,10 +69,6 @@ async def amain(args, loop):  # pragma: no cover
     logger = logging.getLogger('MAIN')
 
     if args.cert or args.cafile or args.no_hostname_check:
-        if urlparse(args.server_url).scheme.lower() != 'https':
-            logger.fatal("https:// scheme in URI required for TLS operation. "
-                         "Terminating program.")
-            sys.exit(2)
         context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
         if args.cafile:
             context.load_verify_locations(cafile=args.cafile)
@@ -117,6 +113,7 @@ def main():  # pragma: no cover
     args = parse_args()
     logger = setup_logger('MAIN', args.verbosity)
     setup_logger('Listener', args.verbosity)
+    setup_logger('ConnPool', args.verbosity)
 
     logger.info("Starting eventloop...")
     if not args.disable_uvloop:

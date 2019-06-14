@@ -32,14 +32,22 @@ class ConnPool:
         self._respawn_coro = None
         self._conn_builders = set()
 
-    def start(self):
-        self._respawn_coro = self._loop.create_task(self._pool_stabilizer)
+    async def start(self):
+        self._respawn_coro = self._loop.create_task(self._pool_stabilizer())
 
-    def stop():
+    async def stop(self):
         self._respawn_coro.cancel()
-        for t in self._conn_builders:
-            t.cancel()
-        self._conn_builders.clear()
+        while self._conn_builders:
+            tasks = list(self._conn_builders)
+            self._conn_builders.clear()
+            for t in tasks:
+                t.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+        tasks = []
+        for (reader, writer), _ in self._reserve:
+            writer.close()
+            tasks.append(writer.wait_closed())
+        await asyncio.gather(*tasks, return_exceptions=True)
 
     def _spend_conn(self):
         self._conn_debt += 1
@@ -67,13 +75,14 @@ class ConnPool:
             self._logger.error("Got exception during upstream connection: %s", str(exc))
             await fail()
         else:
+            self._logger.debug("Successfully built upstream connection.")
             if self._waiters:
                 self._logger.warning("Dispatching connection directly to waiter!")
                 fut = self._waiters.popleft()
                 fut.set_result(conn)
             else:
                 grabbed = asyncio.Event()
-                elem = (res, grabbed)
+                elem = (conn, grabbed)
                 self._reserve.append(elem)
                 try:
                     await asyncio.wait_for(grabbed.wait(), self._ttl)
@@ -85,17 +94,21 @@ class ConnPool:
                                            "in reserve. This should not happen.")
                     else:
                         self._spend_conn()
+                        conn[1].close()
                     
 
     async def _pool_stabilizer(self):
+        def _builder_done_cb(t, fut):
+            self._conn_builders.discard(t)
+
         while True:
             await self._respawn_required.wait()
             self._logger.debug("_pool_stabilizer kicks in: got %d connections "
                                "to make", self._conn_debt)
-            for _ in self._conn_debt:
-                t = self._loop.create_task(self._build_conn)
+            for _ in range(self._conn_debt):
+                t = self._loop.create_task(self._build_conn())
                 self._conn_builders.add(t)
-                t.add_done_callback(partial(self._conn_builders.discard, t))
+                t.add_done_callback(partial(_builder_done_cb, t))
             self._respawn_required.clear()
             self._conn_debt = 0
 
@@ -124,14 +137,19 @@ class Listener:  # pylint: disable=too-many-instance-attributes
         self._logger = logging.getLogger(self.__class__.__name__)
         self._listen_address = listen_address
         self._listen_port = listen_port
-        self._dst_address = dst_address
-        self._dst_port = dst_port
-        self._ssl_context = ssl_context
-        self._timeout = timeout
         self._children = weakref.WeakSet()
         self._server = None
+        self._conn_pool = ConnPool(dst_address=dst_address,
+                                   dst_port=dst_port,
+                                   ssl_context=ssl_context,
+                                   timeout=timeout,
+                                   backoff=5,
+                                   ttl=30,
+                                   size=10,
+                                   loop=self._loop)
 
     async def stop(self):
+        await self._conn_pool.stop()
         self._server.close()
         await self._server.wait_closed()
         while self._children:
@@ -146,11 +164,24 @@ class Listener:  # pylint: disable=too-many-instance-attributes
             # after wait_closed() completed
             await asyncio.sleep(.5)
 
+    async def _pump(self, writer, reader):
+        try:
+            while True:
+                data = await reader.read(BUFSIZE)
+                if not data:
+                    break
+                writer.write(data)
+                await writer.drain()
+        finally:
+            writer.close()
+
     async def handler(self, reader, writer):
         peer_addr = writer.transport.get_extra_info('peername')
         self._logger.info("Client %s connected", str(peer_addr))
         try:
-            pass
+            dst_reader, dst_writer = await self._conn_pool.get() 
+            await asyncio.gather(self._pump(writer, dst_reader),
+                                 self._pump(dst_writer, reader))
         except asyncio.CancelledError:  # pylint: disable=try-except-raise
             raise
         except Exception as exc:  # pragma: no cover
@@ -161,6 +192,7 @@ class Listener:  # pylint: disable=too-many-instance-attributes
             writer.close()
 
     async def start(self):
+        await self._conn_pool.start()
         def _spawn(reader, writer):
             self._children.add(
                 self._loop.create_task(self.handler(reader, writer)))
