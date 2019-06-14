@@ -18,6 +18,7 @@ setup(name='ptw',
           'wheel',
       ],
       install_requires=[
+          'sdnotify>=0.3.2',
       ],
       extras_require={
           'uvloop': 'uvloop>=0.11.0',

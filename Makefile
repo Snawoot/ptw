@@ -8,7 +8,7 @@ VENV ?= $(PRJ_DIR)venv
 PKGVENV ?= $(PRJ_DIR)pkg_venv
 
 install: $(VENV) setup.py
-	$(VENV)/bin/python -m pip install -U .[dev]
+	$(VENV)/bin/python -m pip install -U .
 
 $(VENV):
 	$(PYTHON) -m venv $(VENV)
