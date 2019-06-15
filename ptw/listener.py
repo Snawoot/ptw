@@ -53,9 +53,11 @@ class Listener:  # pylint: disable=too-many-instance-attributes
                 if hlt_task in done:
                     rd_task.cancel()
                     break
-                data = rd_task.result()
+                try:
+                    data = rd_task.result()
+                except ConnectionResetError:
+                    break
                 if not data:
-                    halt.set()
                     break
                 writer.write(data)
                 wr_task = asyncio.ensure_future(writer.drain())

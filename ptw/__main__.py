@@ -12,7 +12,8 @@ from sdnotify import SystemdNotifier
 from .listener import Listener
 from .constants import LogLevel
 from .utils import check_port, check_positive_float, check_loglevel, \
-    setup_logger, enable_uvloop, exit_handler, heartbeat, check_positive_int
+    setup_logger, enable_uvloop, exit_handler, heartbeat, check_positive_int, \
+    ignore_ssl_error
 from .connpool import ConnPool
 
 
@@ -147,6 +148,8 @@ def main():  # pragma: no cover
                         "Falling back to built-in event loop.")
 
     loop = asyncio.get_event_loop()
+    # workaround for Python bug on pending writes to SSL connections
+    ignore_ssl_error(loop)
     loop.run_until_complete(amain(args, loop))
     loop.close()
     logger.info("Server finished its work.")
