@@ -12,7 +12,8 @@ from sdnotify import SystemdNotifier
 from .listener import Listener
 from .constants import LogLevel
 from .utils import check_port, check_positive_float, check_loglevel, \
-    setup_logger, enable_uvloop, exit_handler, heartbeat
+    setup_logger, enable_uvloop, exit_handler, heartbeat, check_positive_int
+from .connpool import ConnPool
 
 
 def parse_args():
@@ -42,6 +43,20 @@ def parse_args():
                               default=57800,
                               type=check_port,
                               help="bind port")
+
+    pool_group = parser.add_argument_group('pool options')
+    pool_group.add_argument("-n", "--pool-size",
+                            default=25,
+                            type=check_positive_int,
+                            help="connection pool size")
+    pool_group.add_argument("-B", "--backoff",
+                            default=5,
+                            type=check_positive_float,
+                            help="delay after connection attempt failure in seconds")
+    pool_group.add_argument("-T", "--ttl",
+                            default=30,
+                            type=check_positive_float,
+                            help="lifetime of idle pool connection in seconds")
 
     timing_group = parser.add_argument_group('timing options')
     timing_group.add_argument("-w", "--timeout",
@@ -84,12 +99,19 @@ async def amain(args, loop):  # pragma: no cover
         context = None
 
 
+    pool = ConnPool(dst_address=args.dst_address,
+                    dst_port=args.dst_port,
+                    ssl_context=context,
+                    timeout=args.timeout,
+                    backoff=args.backoff,
+                    ttl=args.ttl,
+                    size=args.pool_size,
+                    loop=loop)
+    await pool.start()
     server = Listener(listen_address=args.bind_address,
                       listen_port=args.bind_port,
-                      ssl_context=context,
-                      dst_address=args.dst_address,
-                      dst_port=args.dst_port,
                       timeout=args.timeout,
+                      pool=pool,
                       loop=loop)
     await server.start()
     logger.info("Server started.")
@@ -107,6 +129,7 @@ async def amain(args, loop):  # pragma: no cover
     await loop.run_in_executor(None, notifier.notify, "STOPPING=1")
     beat.cancel()
     await server.stop()
+    await pool.stop()
 
 
 def main():  # pragma: no cover
