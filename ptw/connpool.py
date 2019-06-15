@@ -55,10 +55,12 @@ class ConnPool:
 
     async def _build_conn(self):
         async def fail():
-            self._logger._debug("Failed upstream connection. Backoff for %d "
-                                "seconds", self._backoff)
-            await asyncio.sleep(self._backoff)
-            self._spend_conn()
+            try:
+                self._logger._debug("Failed upstream connection. Backoff for %d "
+                                    "seconds", self._backoff)
+                await asyncio.sleep(self._backoff)
+            finally:
+                self._spend_conn()
 
         try:
             conn = await asyncio.wait_for(
@@ -93,8 +95,9 @@ class ConnPool:
                         self._logger.debug("Not found expired connection "
                                            "in reserve. This should not happen.")
                     else:
-                        self._spend_conn()
                         conn[1].close()
+        finally:
+            self._spend_conn()
                     
 
     async def _pool_stabilizer(self):
@@ -103,17 +106,17 @@ class ConnPool:
 
         while True:
             await self._respawn_required.wait()
+            debt = self._conn_debt
+            self._conn_debt = 0
+            self._respawn_required.clear()
             self._logger.debug("_pool_stabilizer kicks in: got %d connections "
-                               "to make", self._conn_debt)
-            for _ in range(self._conn_debt):
+                               "to make", debt)
+            for _ in range(debt):
                 t = self._loop.create_task(self._build_conn())
                 self._conn_builders.add(t)
                 t.add_done_callback(partial(_builder_done_cb, t))
-            self._respawn_required.clear()
-            self._conn_debt = 0
 
     async def get(self):
-        self._spend_conn()
         if self._reserve:
             conn, event = self._reserve.popleft()
             event.set()
