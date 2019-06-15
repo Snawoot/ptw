@@ -70,7 +70,6 @@ class Listener:  # pylint: disable=too-many-instance-attributes
                     break
         finally:
             halt.set()
-            writer.close()
 
     async def handler(self, reader, writer):
         peer_addr = writer.transport.get_extra_info('peername')
@@ -87,6 +86,7 @@ class Listener:  # pylint: disable=too-many-instance-attributes
                                    " %s", str(exc))
         finally:
             self._logger.info("Client %s disconnected", str(peer_addr))
+            dst_writer.close()
             writer.close()
 
     async def start(self):
