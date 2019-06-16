@@ -2,7 +2,9 @@
 
 Pooling TLS Wrapper
 
-Accepts TCP connections on listen port and forwards them, wrapped in TLS, to destination port. `ptw` maintains pool of fresh established TLS connections effectively cancelling delay required for TLS handshake.o
+Accepts TCP connections on listen port and forwards them, wrapped in TLS, to destination port. `ptw` maintains pool of fresh established TLS connections effectively cancelling delay required for TLS handshake.
+
+ptw may serve as drop-in replacement for stunnel or haproxy for purpose of forwarding connection. Thus, it is intended for use with stunnel or haproxy on server side, accepting TLS connections and forwarding them, for example, to SOCKS proxy.
 
 `ptw` can be used with custom CAs and/or mutual TLS auth with certificates.
 
@@ -15,6 +17,16 @@ Accepts TCP connections on listen port and forwards them, wrapped in TLS, to des
 ```
 pip3 install -U .
 ```
+
+## Example
+
+```
+ptw -n 50 -T 300 example.com 1443
+```
+
+This command will accept TCP connections on port 57800, wrap them in TLS and forward them to port 1443 of example.com host, maintaining pool of at least 50 TLS connections no older than 300 seconds. For client TLS authentication see also `-c` and `-k` options.
+
+
 
 ## Synopsis
 
