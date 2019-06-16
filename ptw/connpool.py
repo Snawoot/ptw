@@ -70,12 +70,12 @@ class ConnPool:
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
-                self._logger.error("Got exception during upstream connection: %s", str(exc))
+                self._logger.exception("Got exception while connecting to upstream: %s", str(exc))
                 await fail()
             else:
                 self._logger.debug("Successfully built upstream connection.")
                 if self._waiters:
-                    self._logger.warning("Dispatching connection directly to waiter!")
+                    self._logger.warning("Pool exhausted. Dispatching connection directly to waiter!")
                     fut = self._waiters.popleft()
                     fut.set_result(conn)
                 else:
@@ -97,8 +97,10 @@ class ConnPool:
         if self._reserve:
             conn, event = self._reserve.popleft()
             event.set()
+            self._logger.debug("Obtained connection from pool.")
             return conn
         else:
             fut = self._loop.create_future()
             self._waiters.append(fut)
+            self._logger.debug("Awaiting for free connection.")
             return await fut
