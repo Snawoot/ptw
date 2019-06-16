@@ -59,12 +59,10 @@ def parse_args():
                             default=30,
                             type=utils.check_positive_float,
                             help="lifetime of idle pool connection in seconds")
-
-    timing_group = parser.add_argument_group('timing options')
-    timing_group.add_argument("-w", "--timeout",
-                              default=4,
-                              type=utils.check_positive_float,
-                              help="server connect timeout")
+    pool_group.add_argument("-w", "--timeout",
+                            default=4,
+                            type=utils.check_positive_float,
+                            help="server connect timeout")
 
     tls_group = parser.add_argument_group('TLS options')
     tls_group.add_argument("-c", "--cert",
