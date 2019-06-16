@@ -11,6 +11,7 @@ class ConnPool:
                  dst_address,
                  dst_port,
                  ssl_context=True,
+                 ssl_hostname=None,
                  timeout=5,
                  backoff=5,
                  ttl=30,
@@ -21,6 +22,7 @@ class ConnPool:
         self._dst_address = dst_address
         self._dst_port = dst_port
         self._ssl_context = ssl_context
+        self._ssl_hostname = ssl_hostname
         self._timeout = timeout
         self._ttl = ttl
         self._size = size
@@ -61,7 +63,8 @@ class ConnPool:
                 conn = await asyncio.wait_for(
                     asyncio.open_connection(self._dst_address,
                                             self._dst_port,
-                                            ssl=self._ssl_context),
+                                            ssl=self._ssl_context,
+                                            server_hostname=self._ssl_hostname),
                     self._timeout)
             except asyncio.TimeoutError:
                 self._logger.error("Connection to upstream timed out.")

@@ -132,6 +132,12 @@ def check_loglevel(arg):
         raise argparse.ArgumentTypeError("%s is not valid loglevel" % (repr(arg),))
 
 
+def check_ssl_hostname(arg):
+    if not arg:
+        raise argparse.ArgumentTypeError("%s is not valid server name" % (repr(arg),))
+    return arg
+
+
 def enable_uvloop():  # pragma: no cover
     try:
         import uvloop

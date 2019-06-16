@@ -72,11 +72,16 @@ def parse_args():
     tls_group.add_argument("-C", "--cafile",
                            help="override default CA certs "
                            "by set specified in file")
-    tls_group.add_argument("--no-hostname-check",
-                           action="store_true",
-                           help="do not check hostname in cert subject. "
-                           "This option is useful for private PKI and "
-                           "available only together with \"--cafile\"")
+    ssl_name_group=tls_group.add_mutually_exclusive_group()
+    ssl_name_group.add_argument("--no-hostname-check",
+                                action="store_true",
+                                help="do not check hostname in cert subject. "
+                                "This option is useful for private PKI and "
+                                "available only together with \"--cafile\"")
+    ssl_name_group.add_argument("--tls-servername",
+                                type=utils.check_ssl_hostname,
+                                help="specifies hostname to expect in server "
+                                "TLS certificate")
     return parser.parse_args()
 
 
@@ -84,6 +89,7 @@ async def amain(args, loop):  # pragma: no cover
     logger = logging.getLogger('MAIN')
 
     context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+    ssl_hostname = None
     if args.cafile:
         context.load_verify_locations(cafile=args.cafile)
     if args.no_hostname_check:
@@ -91,7 +97,9 @@ async def amain(args, loop):  # pragma: no cover
             logger.fatal("CAfile option is required when hostname check "
                          "is disabled. Terminating program.")
             sys.exit(2)
-        context.check_hostname = False
+        ssl_hostname = ''
+    elif args.tls_servername:
+        ssl_hostname = args.tls_servername
     if args.cert:
         context.load_cert_chain(certfile=args.cert, keyfile=args.key)
 
@@ -99,6 +107,7 @@ async def amain(args, loop):  # pragma: no cover
     pool = ConnPool(dst_address=args.dst_address,
                     dst_port=args.dst_port,
                     ssl_context=context,
+                    ssl_hostname=ssl_hostname,
                     timeout=args.timeout,
                     backoff=args.backoff,
                     ttl=args.ttl,
