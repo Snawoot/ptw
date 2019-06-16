@@ -15,7 +15,7 @@ ptw may serve as drop-in replacement for stunnel or haproxy for purpose secure t
 ## Installation
 
 ```
-pip3 install -U .
+pip3 install -U ptw
 ```
 
 ## Example
