@@ -2,6 +2,10 @@
 
 Pooling TLS Wrapper
 
+Accepts TCP connections on listen port and forwards them, wrapped in TLS, to destination port. `ptw` maintains pool of fresh established TLS connections effectively cancelling delay required for TLS handshake.o
+
+`ptw` can be used with custom CAs and/or mutual TLS auth with certificates.
+
 ## Requirements
 
 * Python 3.5.3+
@@ -16,9 +20,9 @@ pip3 install -U .
 
 ```
 $ ptw --help
-usage: ptw [-h] [-v {debug,info,warn,error,fatal}] [--disable-uvloop]
-           [-a BIND_ADDRESS] [-p BIND_PORT] [-n POOL_SIZE] [-B BACKOFF]
-           [-T TTL] [-w TIMEOUT] [-c CERT] [-k KEY] [-C CAFILE]
+usage: ptw [-h] [-v {debug,info,warn,error,fatal}] [-l FILE]
+           [--disable-uvloop] [-a BIND_ADDRESS] [-p BIND_PORT] [-n POOL_SIZE]
+           [-B BACKOFF] [-T TTL] [-w TIMEOUT] [-c CERT] [-k KEY] [-C CAFILE]
            [--no-hostname-check]
            dst_address dst_port
 
@@ -32,6 +36,8 @@ optional arguments:
   -h, --help            show this help message and exit
   -v {debug,info,warn,error,fatal}, --verbosity {debug,info,warn,error,fatal}
                         logging verbosity (default: info)
+  -l FILE, --logfile FILE
+                        log file location (default: None)
   --disable-uvloop      do not use uvloop even if it is available (default:
                         False)
 
@@ -63,4 +69,5 @@ TLS options:
   --no-hostname-check   do not check hostname in cert subject. This option is
                         useful for private PKI and available only together
                         with "--cafile" (default: False)
+
 ```
