@@ -56,8 +56,8 @@ class ConnPool:
     async def _build_conn(self):
         async def fail():
             try:
-                self._logger._debug("Failed upstream connection. Backoff for %d "
-                                    "seconds", self._backoff)
+                self._logger.debug("Failed upstream connection. Backoff for %d "
+                                   "seconds", self._backoff)
                 await asyncio.sleep(self._backoff)
             finally:
                 self._spend_conn()
