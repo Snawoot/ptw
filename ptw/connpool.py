@@ -23,7 +23,7 @@ class ConnPool:
         self._ssl_context = ssl_context
         self._timeout = timeout
         self._ttl = ttl
-        self._conn_debt = size
+        self._size = size
         self._backoff = backoff
         self._waiters = collections.deque()
         self._reserve = collections.deque()
@@ -33,7 +33,8 @@ class ConnPool:
         self._conn_builders = set()
 
     async def start(self):
-        self._respawn_coro = self._loop.create_task(self._pool_stabilizer())
+        self._conn_builders = set(self._loop.create_task(self._build_conn())
+                                  for _ in range(self._size))
 
     async def stop(self):
         self._respawn_coro.cancel()
@@ -49,70 +50,48 @@ class ConnPool:
             tasks.append(writer.wait_closed())
         await asyncio.gather(*tasks, return_exceptions=True)
 
-    def _spend_conn(self):
-        self._conn_debt += 1
-        self._respawn_required.set()
-
     async def _build_conn(self):
         async def fail():
             self._logger.debug("Failed upstream connection. Backoff for %d "
                                "seconds", self._backoff)
             await asyncio.sleep(self._backoff)
 
-        try:
-            conn = await asyncio.wait_for(
-                asyncio.open_connection(self._dst_address,
-                                        self._dst_port,
-                                        ssl=self._ssl_context),
-                self._timeout)
-        except asyncio.TimeoutError:
-            self._logger.error("Connection to upstream timed out.")
-            await fail()
-        except asyncio.CancelledError:
-            raise
-        except Exception as exc:
-            self._logger.error("Got exception during upstream connection: %s", str(exc))
-            await fail()
-        else:
-            self._logger.debug("Successfully built upstream connection.")
-            if self._waiters:
-                self._logger.warning("Dispatching connection directly to waiter!")
-                fut = self._waiters.popleft()
-                fut.set_result(conn)
-            else:
-                grabbed = asyncio.Event()
-                elem = (conn, grabbed)
-                self._reserve.append(elem)
-                try:
-                    await asyncio.wait_for(grabbed.wait(), self._ttl)
-                except asyncio.TimeoutError:
-                    try:
-                        self._reserve.remove(elem)
-                    except ValueError:
-                        self._logger.debug("Not found expired connection "
-                                           "in reserve. This should not happen.")
-                    else:
-                        conn[1].close()
-        finally:
-            self._spend_conn()
-                    
-
-    async def _pool_stabilizer(self):
-        def _builder_done_cb(t, fut):
-            self._conn_builders.discard(t)
-
         while True:
-            await self._respawn_required.wait()
-            debt = self._conn_debt
-            self._conn_debt = 0
-            self._respawn_required.clear()
-            self._logger.debug("_pool_stabilizer kicks in: got %d connections "
-                               "to make", debt)
-            for _ in range(debt):
-                t = self._loop.create_task(self._build_conn())
-                self._conn_builders.add(t)
-                t.add_done_callback(partial(_builder_done_cb, t))
-
+            try:
+                conn = await asyncio.wait_for(
+                    asyncio.open_connection(self._dst_address,
+                                            self._dst_port,
+                                            ssl=self._ssl_context),
+                    self._timeout)
+            except asyncio.TimeoutError:
+                self._logger.error("Connection to upstream timed out.")
+                await fail()
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                self._logger.error("Got exception during upstream connection: %s", str(exc))
+                await fail()
+            else:
+                self._logger.debug("Successfully built upstream connection.")
+                if self._waiters:
+                    self._logger.warning("Dispatching connection directly to waiter!")
+                    fut = self._waiters.popleft()
+                    fut.set_result(conn)
+                else:
+                    grabbed = asyncio.Event()
+                    elem = (conn, grabbed)
+                    self._reserve.append(elem)
+                    try:
+                        await asyncio.wait_for(grabbed.wait(), self._ttl)
+                    except asyncio.TimeoutError:
+                        try:
+                            self._reserve.remove(elem)
+                        except ValueError:
+                            self._logger.debug("Not found expired connection "
+                                               "in reserve. This should not happen.")
+                        else:
+                            conn[1].close()
+                    
     async def get(self):
         if self._reserve:
             conn, event = self._reserve.popleft()
