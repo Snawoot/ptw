@@ -35,7 +35,7 @@ $ ptw --help
 usage: ptw [-h] [-v {debug,info,warn,error,fatal}] [-l FILE]
            [--disable-uvloop] [-a BIND_ADDRESS] [-p BIND_PORT] [-n POOL_SIZE]
            [-B BACKOFF] [-T TTL] [-w TIMEOUT] [-c CERT] [-k KEY] [-C CAFILE]
-           [--no-hostname-check]
+           [--no-hostname-check | --tls-servername TLS_SERVERNAME]
            dst_address dst_port
 
 Pooling TLS wrapper
@@ -67,8 +67,6 @@ pool options:
                         (default: 5)
   -T TTL, --ttl TTL     lifetime of idle pool connection in seconds (default:
                         30)
-
-timing options:
   -w TIMEOUT, --timeout TIMEOUT
                         server connect timeout (default: 4)
 
@@ -81,5 +79,8 @@ TLS options:
   --no-hostname-check   do not check hostname in cert subject. This option is
                         useful for private PKI and available only together
                         with "--cafile" (default: False)
+  --tls-servername TLS_SERVERNAME
+                        specifies hostname to expect in server TLS certificate
+                        (default: None)
 
 ```
