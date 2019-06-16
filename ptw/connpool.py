@@ -37,7 +37,6 @@ class ConnPool:
                                   for _ in range(self._size))
 
     async def stop(self):
-        self._respawn_coro.cancel()
         while self._conn_builders:
             tasks = list(self._conn_builders)
             self._conn_builders.clear()
