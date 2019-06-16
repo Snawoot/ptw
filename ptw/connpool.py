@@ -56,6 +56,7 @@ class ConnPool:
                                "seconds", self._backoff)
             await asyncio.sleep(self._backoff)
 
+        grabbed = asyncio.Event()
         while True:
             try:
                 conn = await asyncio.wait_for(
@@ -78,7 +79,7 @@ class ConnPool:
                     fut = self._waiters.popleft()
                     fut.set_result(conn)
                 else:
-                    grabbed = asyncio.Event()
+                    grabbed.clear()
                     elem = (conn, grabbed)
                     self._reserve.append(elem)
                     try:
