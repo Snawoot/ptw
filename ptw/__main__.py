@@ -84,20 +84,17 @@ def parse_args():
 async def amain(args, loop):  # pragma: no cover
     logger = logging.getLogger('MAIN')
 
-    if args.cert or args.cafile or args.no_hostname_check:
-        context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-        if args.cafile:
-            context.load_verify_locations(cafile=args.cafile)
-        if args.no_hostname_check:
-            if not args.cafile:
-                logger.fatal("CAfile option is required when hostname check "
-                             "is disabled. Terminating program.")
-                sys.exit(2)
-            context.check_hostname = False
-        if args.cert:
-            context.load_cert_chain(certfile=args.cert, keyfile=args.key)
-    else:
-        context = None
+    context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+    if args.cafile:
+        context.load_verify_locations(cafile=args.cafile)
+    if args.no_hostname_check:
+        if not args.cafile:
+            logger.fatal("CAfile option is required when hostname check "
+                         "is disabled. Terminating program.")
+            sys.exit(2)
+        context.check_hostname = False
+    if args.cert:
+        context.load_cert_chain(certfile=args.cert, keyfile=args.key)
 
 
     pool = ConnPool(dst_address=args.dst_address,
