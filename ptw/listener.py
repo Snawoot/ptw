@@ -1,5 +1,4 @@
 import asyncio
-import weakref
 import logging
 import collections
 from functools import partial
@@ -18,7 +17,7 @@ class Listener:  # pylint: disable=too-many-instance-attributes
         self._logger = logging.getLogger(self.__class__.__name__)
         self._listen_address = listen_address
         self._listen_port = listen_port
-        self._children = weakref.WeakSet()
+        self._children = set()
         self._server = None
         self._conn_pool = pool
 
@@ -76,8 +75,11 @@ class Listener:  # pylint: disable=too-many-instance-attributes
 
     async def start(self):
         def _spawn(reader, writer):
-            self._children.add(
-                self._loop.create_task(self.handler(reader, writer)))
+            def task_cb(task, fut):
+                self._children.discard(task)
+            task = self._loop.create_task(self.handler(reader, writer))
+            self._children.add(task)
+            task.add_done_callback(partial(task_cb, task))
 
         self._server = await asyncio.start_server(_spawn,
                                                   self._listen_address,
