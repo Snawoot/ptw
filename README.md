@@ -4,7 +4,7 @@ Pooling TLS Wrapper
 
 Accepts TCP connections on listen port and forwards them, wrapped in TLS, to destination port. `ptw` maintains pool of fresh established TLS connections effectively cancelling delay required for TLS handshake.
 
-ptw may serve as drop-in replacement for stunnel or haproxy for purpose of forwarding connection. Thus, it is intended for use with stunnel or haproxy on server side, accepting TLS connections and forwarding them, for example, to SOCKS proxy.
+ptw may serve as drop-in replacement for stunnel or haproxy for purpose of forwarding connection. Thus, it is intended for use with stunnel or haproxy on server side, accepting TLS connections and forwarding them, for example, to SOCKS proxy. In such configuration make sure your server timeouts long enough to allow fit lifetime of idle client TLS sessions (`-T` option).
 
 `ptw` can be used with custom CAs and/or mutual TLS auth with certificates.
 
