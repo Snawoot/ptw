@@ -45,11 +45,8 @@ class ConnPool:
             for t in tasks:
                 t.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
-        tasks = []
         for (reader, writer), _ in self._reserve:
             writer.close()
-            tasks.append(writer.wait_closed())
-        await asyncio.gather(*tasks, return_exceptions=True)
 
     async def _build_conn(self):
         async def fail():
