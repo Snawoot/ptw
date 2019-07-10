@@ -11,6 +11,7 @@ from sdnotify import SystemdNotifier
 
 from .listener import Listener
 from .constants import LogLevel
+from .proxy_protocol import ProxyProtocol, check_proxyprotocol
 from . import utils
 from .connpool import ConnPool
 
@@ -45,6 +46,12 @@ def parse_args():
                               default=57800,
                               type=utils.check_port,
                               help="bind port")
+    listen_group.add_argument("-P", "--proxy-protocol",
+                              default=ProxyProtocol.none,
+                              choices=ProxyProtocol,
+                              type=check_proxyprotocol,
+                              help="transparent mode: prepend all connections"
+                              " with proxy-protocol data")
 
     pool_group = parser.add_argument_group('pool options')
     pool_group.add_argument("-n", "--pool-size",
@@ -104,6 +111,7 @@ async def amain(args, loop):  # pragma: no cover
         context.load_cert_chain(certfile=args.cert, keyfile=args.key)
 
 
+    proxy_protocol = args.proxy_protocol.value() if args.proxy_protocol.value else None
     pool = ConnPool(dst_address=args.dst_address,
                     dst_port=args.dst_port,
                     ssl_context=context,
@@ -118,6 +126,7 @@ async def amain(args, loop):  # pragma: no cover
                       listen_port=args.bind_port,
                       timeout=args.timeout,
                       pool=pool,
+                      proxy_protocol=proxy_protocol,
                       loop=loop)
     await server.start()
     logger.info("Server started.")

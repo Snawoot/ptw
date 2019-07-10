@@ -4,6 +4,7 @@ import collections
 from functools import partial
 
 from .constants import BUFSIZE
+from .utils import get_orig_dst
 
 
 class Listener:  # pylint: disable=too-many-instance-attributes
@@ -12,6 +13,7 @@ class Listener:  # pylint: disable=too-many-instance-attributes
                  listen_port,
                  pool,
                  timeout=None,
+                 proxy_protocol=None,
                  loop=None):
         self._loop = loop if loop is not None else asyncio.get_event_loop()
         self._logger = logging.getLogger(self.__class__.__name__)
@@ -20,6 +22,7 @@ class Listener:  # pylint: disable=too-many-instance-attributes
         self._children = set()
         self._server = None
         self._conn_pool = pool
+        self._proxy_protocol = proxy_protocol
 
     async def stop(self):
         await self._conn_pool.stop()
@@ -59,8 +62,21 @@ class Listener:  # pylint: disable=too-many-instance-attributes
     async def handler(self, reader, writer):
         peer_addr = writer.transport.get_extra_info('peername')
         self._logger.info("Client %s connected", str(peer_addr))
+        if self._proxy_protocol:
+            try:
+                sock = writer.transport.get_extra_info('socket')
+                orig_dst = get_orig_dst(sock)
+                prologue = self._proxy_protocol.prologue(peer_addr, orig_dst)
+                self._logger.debug("Client %s orig_dst=%s", str(peer_addr), str(orig_dst))
+                self._logger.debug("Client %s prologue=%s", str(peer_addr), repr(prologue))
+            except Exception as exc:
+                self._logger.exception("Unable to handle connection transparency: "
+                                   "%s", str(exc))
+                return
         try:
             dst_reader, dst_writer = await self._conn_pool.get() 
+            if self._proxy_protocol:
+                dst_writer.write(prologue)
             await asyncio.gather(self._pump(writer, dst_reader),
                                  self._pump(dst_writer, reader))
         except asyncio.CancelledError:  # pylint: disable=try-except-raise
