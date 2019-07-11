@@ -18,23 +18,87 @@ ptw may serve as drop-in replacement for stunnel or haproxy for purpose of secur
 pip3 install ptw
 ```
 
-## Example
+## Usage
+
+See [quickcerts](https://pypi.org/project/quickcerts/) for easy TLS certificate generator.
+
+#### Wrapper for SOCKS/HTTP proxy
 
 ```
-ptw -n 50 -T 300 example.com 1443
+ptw -c mycert.pem -k mykey.pem -C ca.pem -n 50 -T 300 example.com 1443
+```
+
+Corresponding haproxy configuration on server:
+
+```
+...
+
+defaults
+    log       global
+    mode      tcp
+    option    tcplog
+    option    dontlognull
+    timeout connect 5000
+    timeout check   5000
+    timeout client  600000
+    timeout server  600000
+    timeout tunnel  600000
+
+frontend socks-proxy
+    bind *:1443 ssl crt /etc/haproxy/server.combined.pem ca-file /etc/haproxy/ca.pem verify required
+    default_backend socks-proxy
+
+backend socks-proxy
+    server localsocks 127.0.0.1:1080
+
 ```
 
 This command will accept TCP connections on port 57800, wrap them in TLS and forward them to port 1443 of example.com host, maintaining pool of at least 50 TLS connections no older than 300 seconds. For client TLS authentication see also `-c` and `-k` options.
 
+#### Transparent proxy for TCP connections
 
+Run on your router:
+
+```
+pts -a 0.0.0.0 -c mycert.pem -k mykey.pem -C ca.pem -n 50 -T 300 -P v1 example.com 2443
+```
+
+Add following rule to iptables:
+
+```sh
+iptables -I PREROUTING 1 -t nat -p tcp -s 192.168.0.0/16 '!' -d 192.168.0.0/16 -j REDIRECT --to 57800
+```
+
+Assuming your local network is covered by prefix `192.168.0.0/16`.
+
+Corresponding haproxy config sections:
+
+```
+frontend tls-wrapper
+    bind *:2443 ssl crt /etc/haproxy/server.combined.pem ca-file /etc/haproxy/ca.pem verify required
+    default_backend strip-proxy
+
+backend strip-proxy
+    server strip-proxy 127.0.0.1:41718
+
+frontend strip-proxy
+    bind 127.0.0.1:41718 accept-proxy
+    default_backend passthrough
+
+backend passthrough
+    server direct *
+```
+
+This setup will redirect all TCP connections in your network.
 
 ## Synopsis
 
 ```
 $ ptw --help
 usage: ptw [-h] [-v {debug,info,warn,error,fatal}] [-l FILE]
-           [--disable-uvloop] [-a BIND_ADDRESS] [-p BIND_PORT] [-n POOL_SIZE]
-           [-B BACKOFF] [-T TTL] [-w TIMEOUT] [-c CERT] [-k KEY] [-C CAFILE]
+           [--disable-uvloop] [-a BIND_ADDRESS] [-p BIND_PORT] [-P {none,v1}]
+           [-n POOL_SIZE] [-B BACKOFF] [-T TTL] [-w TIMEOUT] [-c CERT]
+           [-k KEY] [-C CAFILE]
            [--no-hostname-check | --tls-servername TLS_SERVERNAME]
            dst_address dst_port
 
@@ -58,6 +122,9 @@ listen options:
                         bind address (default: 127.0.0.1)
   -p BIND_PORT, --bind-port BIND_PORT
                         bind port (default: 57800)
+  -P {none,v1}, --proxy-protocol {none,v1}
+                        transparent mode: prepend all connections with proxy-
+                        protocol data (default: none)
 
 pool options:
   -n POOL_SIZE, --pool-size POOL_SIZE
@@ -82,5 +149,4 @@ TLS options:
   --tls-servername TLS_SERVERNAME
                         specifies hostname to expect in server TLS certificate
                         (default: None)
-
 ```
