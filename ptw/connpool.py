@@ -120,10 +120,12 @@ class ConnPool:
                 await fail()
             else:
                 self._logger.debug("Successfully built upstream connection.")
-                if self._waiters:
-                    self._logger.warning("Pool exhausted. Dispatching connection directly to waiter!")
+                while self._waiters:
                     fut = self._waiters.popleft()
-                    fut.set_result(conn)
+                    if not fut.cancelled():
+                        self._logger.warning("Pool exhausted. Dispatching connection directly to waiter!")
+                        fut.set_result(conn)
+                        break
                 else:
                     grabbed = asyncio.Event()
 
