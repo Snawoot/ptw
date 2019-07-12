@@ -63,8 +63,8 @@ class ConnPool:
             await asyncio.sleep(self._backoff)
 
         async def fail_corrupted():
-            self._logger.debug("Upstream connection corrupted. Backoff for %d "
-                               "seconds", self._backoff)
+            self._logger.warning("Upstream connection corrupted. Backoff for"
+                                 " %d seconds", self._backoff)
             await asyncio.sleep(self._backoff)
 
         async def reader_guard(reader):
