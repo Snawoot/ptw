@@ -44,11 +44,14 @@ class ProxyProtocolV1(BaseProxyProtocol):
 PPV2SIG = b'\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A'
 PPV2StructIPv4 = struct.Struct("!12sBBH" "4s4sHH")
 PPV2StructIPv6 = struct.Struct("!12sBBH" "16s16sHH")
+PPV2StructUNKNOWN = struct.Struct("!12sBBH")
 PPV2VER = 2
 PPV2PROXYCMD = 1
 PPV2VERCMD = ((PPV2VER << 4) | PPV2PROXYCMD)
 PPV2TCPOVERIPV4 = 0x11
 PPV2TCPOVERIPV6 = 0x21
+PPV2UNKNOWNAF = 0x0
+PPV2UNKNOWNAF_ADDRLEN = 0x0
 PPV2TCPOVERIPV4_ADDRLEN = 12
 PPV2TCPOVERIPV6_ADDRLEN = 36
 
@@ -80,7 +83,8 @@ class ProxyProtocolV2(BaseProxyProtocol):
                                       src_port,
                                       dst_port)
         else:
-            raise NotImplementedError()
+            res = PPV2StructUNKNOWN.pack(PPV2SIG, PPV2VERCMD, PPV2UNKNOWNAF,
+                                      PPV2UNKNOWNAF_ADDRLEN)
         return res
 
 
