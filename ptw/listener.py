@@ -73,6 +73,7 @@ class Listener:  # pylint: disable=too-many-instance-attributes
                 self._logger.exception("Unable to handle connection transparency: "
                                    "%s", str(exc))
                 return
+        dst_writer = None
         try:
             dst_reader, dst_writer = await self._conn_pool.get() 
             if self._proxy_protocol:
@@ -86,7 +87,8 @@ class Listener:  # pylint: disable=too-many-instance-attributes
                                    " %s", str(exc))
         finally:
             self._logger.info("Client %s disconnected", str(peer_addr))
-            dst_writer.close()
+            if dst_writer is not None:
+                dst_writer.close()
             writer.close()
 
     async def start(self):

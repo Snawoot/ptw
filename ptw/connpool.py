@@ -6,6 +6,14 @@ from functools import partial
 from .constants import BUFSIZE
 
 
+class InappropriateRead(Exception):
+    pass
+
+
+class SuccessError(Exception):
+    pass
+
+
 class ConnPool:
     def __init__(self, *,
                  dst_address,
@@ -54,7 +62,46 @@ class ConnPool:
                                "seconds", self._backoff)
             await asyncio.sleep(self._backoff)
 
-        grabbed = asyncio.Event()
+        async def fail_corrupted():
+            self._logger.debug("Upstream connection corrupted. Backoff for %d "
+                               "seconds", self._backoff)
+            await asyncio.sleep(self._backoff)
+
+        async def reader_guard(reader):
+            try:
+                await reader.read(1)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                self._logger.debug("reader_guard catched exception on "
+                                   "reader.read(): %s", str(exc))
+            raise InappropriateRead()
+
+        async def waiter_guard(event, timeout):
+            await asyncio.wait_for(event.wait(), timeout)
+            raise SuccessError()
+
+        async def taker(grabbed, read_task):
+            grabbed.set()
+            if read_task.done():
+                raise InapproptiateRead()
+            else:
+                try:
+                    await read_task
+                except asyncio.CancelledError:
+                    pass
+                else:
+                    raise InappropriateRead()
+
+        def try_remove_from_queue(elem):
+            try:
+                self._reserve.remove(elem)
+            except ValueError:
+                self._logger.debug("Not found expired connection "
+                                   "in reserve. This should not happen.")
+            else:
+                elem[0][1].close()
+
         while True:
             try:
                 conn = await asyncio.wait_for(
@@ -78,28 +125,41 @@ class ConnPool:
                     fut = self._waiters.popleft()
                     fut.set_result(conn)
                 else:
-                    grabbed.clear()
-                    elem = (conn, grabbed)
+                    grabbed = asyncio.Event()
+
+                    read_task = asyncio.ensure_future(reader_guard(conn[0]))
+                    event_task = asyncio.ensure_future(waiter_guard(grabbed, self._ttl))
+
+                    elem = (conn, partial(taker, grabbed, read_task))
                     self._reserve.append(elem)
+
                     try:
-                        await asyncio.wait_for(grabbed.wait(), self._ttl)
+                        await asyncio.gather(read_task, event_task)
+                    except InappropriateRead:
+                        event_task.cancel()
+                        if not grabbed.is_set():
+                            try_remove_from_queue(elem)
+                        await fail_corrupted()
                     except asyncio.TimeoutError:
-                        try:
-                            self._reserve.remove(elem)
-                        except ValueError:
-                            self._logger.debug("Not found expired connection "
-                                               "in reserve. This should not happen.")
-                        else:
-                            conn[1].close()
+                        read_task.cancel()
+                        if not grabbed.is_set():
+                            try_remove_from_queue(elem)
+                    except SuccessError:
+                        read_task.cancel()
                     
     async def get(self):
-        if self._reserve:
-            conn, event = self._reserve.popleft()
-            event.set()
-            self._logger.debug("Obtained connection from pool.")
-            return conn
-        else:
-            fut = self._loop.create_future()
-            self._waiters.append(fut)
-            self._logger.debug("Awaiting for free connection.")
-            return await fut
+        while True:
+            if self._reserve:
+                conn, take = self._reserve.popleft()
+                try:
+                    await take()
+                except InappropriateRead:
+                    pass
+                else:
+                    self._logger.debug("Obtained connection from pool.")
+                    return conn
+            else:
+                fut = self._loop.create_future()
+                self._waiters.append(fut)
+                self._logger.debug("Awaiting for free connection.")
+                return await fut
