@@ -89,16 +89,16 @@ backend passthrough
     server direct *
 ```
 
-This setup will redirect all TCP connections in your network.
+This setup will redirect all TCP connections in your network. If your server supports proxy protocol version 2, you may use it as well (option `-P v2`).
 
 ## Synopsis
 
 ```
 $ ptw --help
 usage: ptw [-h] [-v {debug,info,warn,error,fatal}] [-l FILE]
-           [--disable-uvloop] [-a BIND_ADDRESS] [-p BIND_PORT] [-P {none,v1}]
-           [-n POOL_SIZE] [-B BACKOFF] [-T TTL] [-w TIMEOUT] [-c CERT]
-           [-k KEY] [-C CAFILE]
+           [--disable-uvloop] [-a BIND_ADDRESS] [-p BIND_PORT]
+           [-P {none,v1,v2}] [-n POOL_SIZE] [-B BACKOFF] [-T TTL] [-w TIMEOUT]
+           [-c CERT] [-k KEY] [-C CAFILE]
            [--no-hostname-check | --tls-servername TLS_SERVERNAME]
            dst_address dst_port
 
@@ -122,7 +122,7 @@ listen options:
                         bind address (default: 127.0.0.1)
   -p BIND_PORT, --bind-port BIND_PORT
                         bind port (default: 57800)
-  -P {none,v1}, --proxy-protocol {none,v1}
+  -P {none,v1,v2}, --proxy-protocol {none,v1,v2}
                         transparent mode: prepend all connections with proxy-
                         protocol data (default: none)
 
