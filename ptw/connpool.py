@@ -37,9 +37,6 @@ class ConnPool:
         self._backoff = backoff
         self._waiters = collections.deque()
         self._reserve = collections.deque()
-        self._respawn_required = asyncio.Event()
-        self._respawn_required.set()
-        self._respawn_coro = None
         self._conn_builders = set()
 
     async def start(self):
