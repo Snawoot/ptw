@@ -25,7 +25,6 @@ class Listener:  # pylint: disable=too-many-instance-attributes
         self._proxy_protocol = proxy_protocol
 
     async def stop(self):
-        await self._conn_pool.stop()
         self._server.close()
         await self._server.wait_closed()
         while self._children:
