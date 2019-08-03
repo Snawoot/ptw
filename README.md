@@ -60,7 +60,7 @@ This command will accept TCP connections on port 57800, wrap them in TLS and for
 Run on your router:
 
 ```
-pts -a 0.0.0.0 -c mycert.pem -k mykey.pem -C ca.pem -n 50 -T 300 -P v1 example.com 2443
+ptw -a 0.0.0.0 -c mycert.pem -k mykey.pem -C ca.pem -n 50 -T 300 -P v1 example.com 2443
 ```
 
 Add following rule to iptables:
