@@ -4,6 +4,7 @@ import collections
 from functools import partial
 
 from .constants import BUFSIZE
+from .utils import wall_clock_sleep
 
 
 class InappropriateRead(Exception):
@@ -11,6 +12,10 @@ class InappropriateRead(Exception):
 
 
 class SuccessError(Exception):
+    pass
+
+
+class TTLExpired(Exception):
     pass
 
 
@@ -57,12 +62,12 @@ class ConnPool:
         async def fail():
             self._logger.debug("Failed upstream connection. Backoff for %d "
                                "seconds", self._backoff)
-            await asyncio.sleep(self._backoff)
+            await wall_clock_sleep(self._backoff)
 
         async def fail_corrupted():
             self._logger.warning("Upstream connection corrupted. Backoff for"
                                  " %d seconds", self._backoff)
-            await asyncio.sleep(self._backoff)
+            await wall_clock_sleep(self._backoff)
 
         async def reader_guard(reader):
             try:
@@ -74,9 +79,13 @@ class ConnPool:
                                    "reader.read(): %s", str(exc))
             raise InappropriateRead()
 
-        async def waiter_guard(event, timeout):
-            await asyncio.wait_for(event.wait(), timeout)
+        async def waiter_guard(event):
+            await event.wait()
             raise SuccessError()
+
+        async def timeout_guard(timeout):
+            await wall_clock_sleep(timeout)
+            raise TTLExpired()
 
         async def taker(grabbed, read_task):
             grabbed.set()
@@ -101,50 +110,60 @@ class ConnPool:
 
         while True:
             try:
-                conn = await asyncio.wait_for(
-                    asyncio.open_connection(self._dst_address,
-                                            self._dst_port,
-                                            ssl=self._ssl_context,
-                                            server_hostname=self._ssl_hostname),
-                    self._timeout)
-            except asyncio.TimeoutError:
-                self._logger.error("Connection to upstream timed out.")
-                await fail()
-            except asyncio.CancelledError:
-                raise
-            except Exception as exc:
-                self._logger.exception("Got exception while connecting to upstream: %s", str(exc))
-                await fail()
-            else:
-                self._logger.debug("Successfully built upstream connection.")
-                while self._waiters:
-                    fut = self._waiters.popleft()
-                    if not fut.cancelled():
-                        self._logger.warning("Pool exhausted. Dispatching connection directly to waiter!")
-                        fut.set_result(conn)
-                        break
+                try:
+                    conn = await asyncio.wait_for(
+                        asyncio.open_connection(self._dst_address,
+                                                self._dst_port,
+                                                ssl=self._ssl_context,
+                                                server_hostname=self._ssl_hostname),
+                        self._timeout)
+                except asyncio.TimeoutError:
+                    self._logger.error("Connection to upstream timed out.")
+                    await fail()
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:
+                    self._logger.exception("Got exception while connecting to upstream: %s", str(exc))
+                    await fail()
                 else:
-                    grabbed = asyncio.Event()
+                    self._logger.debug("Successfully built upstream connection.")
+                    while self._waiters:
+                        fut = self._waiters.popleft()
+                        if not fut.cancelled():
+                            self._logger.warning("Pool exhausted. Dispatching connection directly to waiter!")
+                            fut.set_result(conn)
+                            break
+                    else:
+                        grabbed = asyncio.Event()
 
-                    read_task = asyncio.ensure_future(reader_guard(conn[0]))
-                    event_task = asyncio.ensure_future(waiter_guard(grabbed, self._ttl))
+                        read_task = asyncio.ensure_future(reader_guard(conn[0]))
+                        tasks = [
+                            asyncio.ensure_future(waiter_guard(grabbed)),
+                            asyncio.ensure_future(timeout_guard(self._ttl)),
+                            read_task,
+                        ]
 
-                    elem = (conn, partial(taker, grabbed, read_task))
-                    self._reserve.append(elem)
+                        elem = (conn, partial(taker, grabbed, read_task))
+                        self._reserve.append(elem)
 
-                    try:
-                        await asyncio.gather(read_task, event_task)
-                    except InappropriateRead:
-                        event_task.cancel()
-                        if not grabbed.is_set():
-                            try_remove_from_queue(elem)
-                        await fail_corrupted()
-                    except asyncio.TimeoutError:
-                        read_task.cancel()
-                        if not grabbed.is_set():
-                            try_remove_from_queue(elem)
-                    except SuccessError:
-                        read_task.cancel()
+                        try:
+                            await asyncio.gather(*tasks)
+                        except InappropriateRead:
+                            if not grabbed.is_set():
+                                try_remove_from_queue(elem)
+                            await fail_corrupted()
+                        except TTLExpired:
+                            if not grabbed.is_set():
+                                try_remove_from_queue(elem)
+                        except SuccessError:
+                            pass
+                        finally:
+                            for task in tasks:
+                                if not task.done():
+                                    task.cancel()
+            except Exception as exc:
+                self._logger.exception("_build_conn crashed with exception: %s",
+                                       str(exc))
                     
     async def get(self):
         while True:
