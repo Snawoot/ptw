@@ -7,6 +7,7 @@ import os
 import queue
 import socket
 import ctypes
+import time
 
 from . import constants
 
@@ -219,3 +220,14 @@ def get_orig_dst(sock):
         return addr, port
     else:
         raise RuntimeError("Unknown address family!")
+
+async def wall_clock_sleep(duration, precision=.2):
+    async def _wall_clock_sleep():
+        end_time = time.time() + duration
+        while time.time() < end_time:
+            await asyncio.sleep(precision)
+
+    try:
+        await asyncio.wait_for(_wall_clock_sleep(), duration)
+    except asyncio.TimeoutError:
+        pass
