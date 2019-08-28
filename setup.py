@@ -6,7 +6,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(name='ptw',
-      version='0.4.1',
+      version='0.4.2',
       description='Pooling TLS Wrapper',
       url='https://github.com/Snawoot/ptw',
       author='Vladislav Yarmak',
@@ -22,20 +22,6 @@ setup(name='ptw',
       ],
       extras_require={
           'uvloop': 'uvloop>=0.11.0',
-          'dev': [
-              'pytest>=3.0.0',
-              'pytest-cov',
-              'pytest-asyncio',
-              'pytest-timeout',
-              'pylint',
-              'tox',
-              'coverage',
-              'async_generator',
-              'setuptools>=38.6.0',
-              'wheel>=0.31.0',
-              'twine>=1.11.0',
-              'cryptography>=1.6',
-          ],
       },
       entry_points={
           'console_scripts': [
