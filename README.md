@@ -28,7 +28,7 @@ See [quickcerts](https://pypi.org/project/quickcerts/) for easy TLS certificate 
 ptw -c mycert.pem -k mykey.pem -C ca.pem -n 50 -T 300 example.com 1443
 ```
 
-Corresponding haproxy configuration on server:
+Corresponding minimal haproxy configuration on server:
 
 ```
 ...
@@ -54,6 +54,8 @@ backend socks-proxy
 ```
 
 This command will accept TCP connections on port 57800, wrap them in TLS and forward them to port 1443 of example.com host, maintaining pool of at least 50 TLS connections no older than 300 seconds. For client TLS authentication see also `-c` and `-k` options.
+
+See also [config\_examples](https://github.com/Snawoot/ptw/tree/universal_haproxy/config_examples) directory for full configuration files for haproxy and danted.
 
 #### Transparent proxy for TCP connections
 
@@ -90,6 +92,10 @@ backend passthrough
 ```
 
 This setup will redirect all TCP connections in your network. If your server supports proxy protocol version 2, you may use it as well (option `-P v2`).
+
+#### Universal haproxy configuration
+
+Also you may share PROXY protocol, SOCKS protocol listener and decoy webserver on single external port. See `haproxy.cfg` in [config\_examples](https://github.com/Snawoot/ptw/tree/universal_haproxy/config_examples) directory.
 
 ## Synopsis
 
