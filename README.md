@@ -11,7 +11,7 @@ ptw may serve as drop-in replacement for stunnel or haproxy for purpose of secur
 ## Features
 
 * Based on proven TLS security and works with well-known server side daemons for TLS termination like haproxy and stunnel.
-* Firewall- and DPI-proof: connections are indistinguishable from HTTPS traffic. See `haproxy.cfg` in [config\_examples](https://github.com/Snawoot/ptw/tree/universal_haproxy/config_examples) directory for complete example of webserver masquerading proxy.
+* Firewall- and DPI-proof: connections are indistinguishable from HTTPS traffic. See `haproxy.cfg` in [config\_examples](https://github.com/Snawoot/ptw/tree/master/config_examples) directory for complete example of webserver masquerading proxy.
 * Greater practical performance comparing to other TCP traffic forwading solutions thanks to separate TLS session for each TCP connection.
 * Hides TLS connection delay with connection pooling.
 * Supports transparent proxy mode.
@@ -65,7 +65,7 @@ backend socks-proxy
 
 This command will accept TCP connections on port 57800, wrap them in TLS and forward them to port 1443 of example.com host, maintaining pool of at least 50 TLS connections no older than 300 seconds. For client TLS authentication see also `-c` and `-k` options.
 
-See also [config\_examples](https://github.com/Snawoot/ptw/tree/universal_haproxy/config_examples) directory for full configuration files for haproxy and danted.
+See also [config\_examples](https://github.com/Snawoot/ptw/tree/master/config_examples) directory for full configuration files for haproxy and danted.
 
 #### Transparent proxy for TCP connections
 
@@ -105,7 +105,7 @@ This setup will redirect all TCP connections in your network. If your server sup
 
 #### Universal haproxy configuration
 
-Also you may share PROXY protocol, SOCKS protocol listener and decoy webserver on single external port. See `haproxy.cfg` in [config\_examples](https://github.com/Snawoot/ptw/tree/universal_haproxy/config_examples) directory.
+Also you may share PROXY protocol, SOCKS protocol listener and decoy webserver on single external port. See `haproxy.cfg` in [config\_examples](https://github.com/Snawoot/ptw/tree/master/config_examples) directory.
 
 ## Synopsis
 
