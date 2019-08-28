@@ -8,6 +8,16 @@ ptw may serve as drop-in replacement for stunnel or haproxy for purpose of secur
 
 `ptw` can be used with custom CAs and/or mutual TLS auth with certificates.
 
+## Features
+
+* Based on proven TLS security and works with well-known server side daemons for TLS termination like haproxy and stunnel.
+* Firewall- and DPI-proof: connections are indistinguishable from HTTPS traffic. See `haproxy.cfg` in [config\_examples](https://github.com/Snawoot/ptw/tree/universal_haproxy/config_examples) directory for complete example of webserver masquerading proxy.
+* Greater practical performance comparing to other TCP traffic forwading solutions thanks to separate TLS session for each TCP connection.
+* Hides TLS connection delay with connection pooling.
+* Supports transparent proxy mode.
+* Supports TLS SNI (server name indication) spoof - it may be useful to bypass SNI based filters in firewalls.
+* Cross-plaform: runs on Linux, macOS, Windows and other Unix-like systems.
+
 ## Requirements
 
 * Python 3.5.3+
