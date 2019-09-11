@@ -17,7 +17,7 @@ Client certificates can be used right away with `ptw`. Server certificate has to
 
 ### Step 2
 
-Spin up server:
+Spin up server. Run following command in `ptw-server` directory:
 
 ```sh
 docker-compose up -d
