@@ -3,7 +3,7 @@ services:
   haproxy:
     image: haproxy
     ports:
-    - "1443:443"
+    - "443:443"
     links:
     - socks
     restart: always
