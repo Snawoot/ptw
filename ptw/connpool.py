@@ -161,6 +161,8 @@ class ConnPool:
                             for task in tasks:
                                 if not task.done():
                                     task.cancel()
+            except asyncio.CancelledError:
+                raise
             except Exception as exc:
                 self._logger.exception("_build_conn crashed with exception: %s",
                                        str(exc))
