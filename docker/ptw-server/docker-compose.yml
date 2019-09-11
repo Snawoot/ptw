@@ -6,5 +6,7 @@ services:
     - "1443:443"
     links:
     - socks
+    restart: always
   socks:
     image: vimagick/dante
+    restart: always
