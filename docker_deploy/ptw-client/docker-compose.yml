@@ -1,0 +1,23 @@
+version: '3'
+services:
+  ptw:
+    image: yarmak/ptw
+    ports:
+    - "57800:57800"
+    restart: always
+    volumes:
+      - ./certs:/certs
+    entrypoint:
+      - ptw
+      - -a
+      - 0.0.0.0
+      - -c
+      - /certs/client.pem
+      - -k
+      - /certs/client.key
+      - -C
+      - /certs/ca.pem
+      - --tls-servername
+      - COMMON_NAME_OF_SERVER_CERT_HERE
+      - SERVER_ADDRESS_HERE
+      - SERVER_PORT_HERE

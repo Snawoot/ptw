@@ -28,6 +28,16 @@ ptw may serve as drop-in replacement for stunnel or haproxy for purpose of secur
 pip3 install ptw
 ```
 
+## Deployment with Docker
+
+ptw is also provided as docker image. You may run it like this:
+
+```sh
+docker run -it --rm yarmak/ptw --help
+```
+
+In addition, there are docker-compose recipes for deployment of client (ptw) and server suite (haproxy with mutual TLS auth, Dante SOCKS proxy and decoy HTTP-server). See [docker\_deploy](https://github.com/Snawoot/ptw/tree/master/docker_deploy) directory for complete docker deployment guide.
+
 ## Usage
 
 See [quickcerts](https://pypi.org/project/quickcerts/) for easy TLS certificate generator.
