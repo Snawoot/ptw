@@ -1,0 +1,17 @@
+version: '3'
+services:
+  haproxy:
+    image: haproxy
+    ports:
+    - "443:443"
+    links:
+    - socks
+    restart: always
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
+      - ./certs:/usr/local/etc/haproxy/certs
+  socks:
+    image: vimagick/dante
+    restart: always
+    volumes:
+      - ./sockd.conf:/etc/sockd.conf
