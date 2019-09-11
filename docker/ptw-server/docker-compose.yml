@@ -13,3 +13,5 @@ services:
   socks:
     image: vimagick/dante
     restart: always
+    volumes:
+      - ./sockd.conf:/etc/sockd.conf
