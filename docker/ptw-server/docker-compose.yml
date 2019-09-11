@@ -1,12 +1,15 @@
 version: '3'
 services:
   haproxy:
-    build: ./haproxy
+    image: haproxy
     ports:
     - "1443:443"
     links:
     - socks
     restart: always
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
+      - ./certs:/usr/local/etc/haproxy/certs
   socks:
     image: vimagick/dante
     restart: always
