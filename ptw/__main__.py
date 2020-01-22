@@ -46,6 +46,11 @@ def parse_args():
                               default=57800,
                               type=utils.check_port,
                               help="bind port")
+    listen_group.add_argument("-Q", "--wait-queue-limit",
+                              default=100,
+                              type=utils.check_positive_int,
+                              help="limit amount of incoming connections "
+                              "waiting for upstream connection from the pool")
     listen_group.add_argument("-P", "--proxy-protocol",
                               default=ProxyProtocol.none,
                               choices=ProxyProtocol,
@@ -127,6 +132,7 @@ async def amain(args, loop):  # pragma: no cover
                       timeout=args.timeout,
                       pool=pool,
                       proxy_protocol=proxy_protocol,
+                      wait_queue_limit=args.wait_queue_limit,
                       loop=loop)
     await server.start()
     logger.info("Server started.")

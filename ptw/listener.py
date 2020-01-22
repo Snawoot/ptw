@@ -14,6 +14,7 @@ class Listener:  # pylint: disable=too-many-instance-attributes
                  pool,
                  timeout=None,
                  proxy_protocol=None,
+                 wait_queue_limit=100,
                  loop=None):
         self._loop = loop if loop is not None else asyncio.get_event_loop()
         self._logger = logging.getLogger(self.__class__.__name__)
@@ -23,6 +24,8 @@ class Listener:  # pylint: disable=too-many-instance-attributes
         self._server = None
         self._conn_pool = pool
         self._proxy_protocol = proxy_protocol
+        self._wait_sem = None
+        self._wait_queue_limit = wait_queue_limit
 
     async def stop(self):
         self._server.close()
@@ -74,7 +77,12 @@ class Listener:  # pylint: disable=too-many-instance-attributes
                 return
         dst_writer = None
         try:
-            dst_reader, dst_writer = await self._conn_pool.get() 
+            if self._wait_sem.locked():
+                self._logger.error("Pool wait queue overflow. "
+                                   "Dropping connection.")
+                return
+            async with self._wait_sem:
+                dst_reader, dst_writer = await self._conn_pool.get() 
             if self._proxy_protocol:
                 dst_writer.write(prologue)
             await asyncio.gather(self._pump(writer, dst_reader),
@@ -98,6 +106,7 @@ class Listener:  # pylint: disable=too-many-instance-attributes
             self._children.add(task)
             task.add_done_callback(partial(task_cb, task))
 
+        self._wait_sem = asyncio.Semaphore(self._wait_queue_limit)
         self._server = await asyncio.start_server(_spawn,
                                                   self._listen_address,
                                                   self._listen_port)
