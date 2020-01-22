@@ -69,14 +69,8 @@ class ConnPool:
                                  " %d seconds", self._backoff)
             await wall_clock_sleep(self._backoff)
 
-        async def reader_guard(reader):
-            try:
-                await reader.read(1)
-            except asyncio.CancelledError:
-                raise
-            except Exception as exc:
-                self._logger.debug("reader_guard catched exception on "
-                                   "reader.read(): %s", str(exc))
+        async def reader_guard(writer):
+            await writer.wait_closed()
             raise InappropriateRead()
 
         async def waiter_guard(event):
@@ -136,7 +130,7 @@ class ConnPool:
                     else:
                         grabbed = asyncio.Event()
 
-                        read_task = asyncio.ensure_future(reader_guard(conn[0]))
+                        read_task = asyncio.ensure_future(reader_guard(conn[1]))
                         tasks = [
                             asyncio.ensure_future(waiter_guard(grabbed)),
                             asyncio.ensure_future(timeout_guard(self._ttl)),
