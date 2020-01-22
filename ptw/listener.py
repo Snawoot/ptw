@@ -74,7 +74,17 @@ class Listener:  # pylint: disable=too-many-instance-attributes
                 return
         dst_writer = None
         try:
-            dst_reader, dst_writer = await self._conn_pool.get() 
+            pool_get_task = asyncio.ensure_future(self._conn_pool.get())
+            client_left = asyncio.ensure_future(writer.wait_closed())
+            done, pending = await asyncio.wait((pool_get_task, client_left),
+                                               return_when=asyncio.FIRST_COMPLETED)
+            if client_left in done:
+                self._logger.warning("Client %s closed connection before upstream "
+                                     "connection was built.", peer_addr)
+                pool_get_task.cancel()
+                return
+            client_left.cancel()
+            dst_reader, dst_writer = pool_get_task.result()
             if self._proxy_protocol:
                 dst_writer.write(prologue)
             await asyncio.gather(self._pump(writer, dst_reader),
