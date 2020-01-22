@@ -7,7 +7,7 @@ import signal
 from functools import partial
 from urllib.parse import urlparse
 
-from sdnotify import SystemdNotifier
+from .asdnotify import AsyncSystemdNotifier
 
 from .listener import Listener
 from .constants import LogLevel
@@ -141,12 +141,12 @@ async def amain(args, loop):  # pragma: no cover
     sig_handler = partial(utils.exit_handler, exit_event)
     signal.signal(signal.SIGTERM, sig_handler)
     signal.signal(signal.SIGINT, sig_handler)
-    notifier = await loop.run_in_executor(None, SystemdNotifier)
-    await loop.run_in_executor(None, notifier.notify, "READY=1")
-    await exit_event.wait()
+    async with AsyncSystemdNotifier() as notifier:
+        await notifier.notify(b"READY=1")
+        await exit_event.wait()
 
-    logger.debug("Eventloop interrupted. Shutting down server...")
-    await loop.run_in_executor(None, notifier.notify, "STOPPING=1")
+        logger.debug("Eventloop interrupted. Shutting down server...")
+        await notifier.notify(b"STOPPING=1")
     beat.cancel()
     await server.stop()
     await pool.stop()
