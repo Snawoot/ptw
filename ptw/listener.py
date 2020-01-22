@@ -21,6 +21,7 @@ class Listener:  # pylint: disable=too-many-instance-attributes
         self._listen_port = listen_port
         self._children = set()
         self._server = None
+        self._timeout = timeout
         self._conn_pool = pool
         self._proxy_protocol = proxy_protocol
 
@@ -74,13 +75,17 @@ class Listener:  # pylint: disable=too-many-instance-attributes
                 return
         dst_writer = None
         try:
-            dst_reader, dst_writer = await self._conn_pool.get() 
+            dst_reader, dst_writer = await asyncio.wait_for(self._conn_pool.get(),
+                                                            self._timeout)
             if self._proxy_protocol:
                 dst_writer.write(prologue)
             await asyncio.gather(self._pump(writer, dst_reader),
                                  self._pump(dst_writer, reader))
         except asyncio.CancelledError:  # pylint: disable=try-except-raise
             raise
+        except asyncio.TimeoutError:
+            self._logger.error("Dropping client %s due to upstream connection "
+                               "wait timed out.", peer_addr)
         except Exception as exc:  # pragma: no cover
             self._logger.exception("Connection handler stopped with exception:"
                                    " %s", str(exc))

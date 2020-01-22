@@ -123,8 +123,8 @@ Also you may share PROXY protocol, SOCKS protocol listener and decoy webserver o
 $ ptw --help
 usage: ptw [-h] [-v {debug,info,warn,error,fatal}] [-l FILE]
            [--disable-uvloop] [-a BIND_ADDRESS] [-p BIND_PORT]
-           [-P {none,v1,v2}] [-n POOL_SIZE] [-B BACKOFF] [-T TTL] [-w TIMEOUT]
-           [-c CERT] [-k KEY] [-C CAFILE]
+           [-W POOL_WAIT_TIMEOUT] [-P {none,v1,v2}] [-n POOL_SIZE]
+           [-B BACKOFF] [-T TTL] [-w TIMEOUT] [-c CERT] [-k KEY] [-C CAFILE]
            [--no-hostname-check | --tls-servername TLS_SERVERNAME]
            dst_address dst_port
 
@@ -148,6 +148,9 @@ listen options:
                         bind address (default: 127.0.0.1)
   -p BIND_PORT, --bind-port BIND_PORT
                         bind port (default: 57800)
+  -W POOL_WAIT_TIMEOUT, --pool-wait-timeout POOL_WAIT_TIMEOUT
+                        timeout for pool await state of client connection
+                        (default: 15)
   -P {none,v1,v2}, --proxy-protocol {none,v1,v2}
                         transparent mode: prepend all connections with proxy-
                         protocol data (default: none)

@@ -46,6 +46,11 @@ def parse_args():
                               default=57800,
                               type=utils.check_port,
                               help="bind port")
+    listen_group.add_argument("-W", "--pool-wait-timeout",
+                              default=15,
+                              type=utils.check_port,
+                              help="timeout for pool await state of client "
+                              "connection")
     listen_group.add_argument("-P", "--proxy-protocol",
                               default=ProxyProtocol.none,
                               choices=ProxyProtocol,
@@ -124,7 +129,7 @@ async def amain(args, loop):  # pragma: no cover
     await pool.start()
     server = Listener(listen_address=args.bind_address,
                       listen_port=args.bind_port,
-                      timeout=args.timeout,
+                      timeout=args.pool_wait_timeout,
                       pool=pool,
                       proxy_protocol=proxy_protocol,
                       loop=loop)
