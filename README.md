@@ -62,7 +62,7 @@ defaults
     timeout check   5000
     timeout client  600000
     timeout server  600000
-    timeout tunnel  600000
+    timeout tunnel  0
 
 frontend socks-proxy
     bind *:1443 ssl crt /etc/haproxy/server.combined.pem ca-file /etc/haproxy/ca.pem verify required
