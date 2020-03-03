@@ -48,7 +48,7 @@ def parse_args():
                               help="bind port")
     listen_group.add_argument("-W", "--pool-wait-timeout",
                               default=15,
-                              type=utils.check_port,
+                              type=utils.check_positive_float,
                               help="timeout for pool await state of client "
                               "connection")
     listen_group.add_argument("-P", "--proxy-protocol",
