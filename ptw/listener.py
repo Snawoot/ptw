@@ -42,22 +42,11 @@ class Listener:  # pylint: disable=too-many-instance-attributes
 
     async def _pump(self, writer, reader):
         while True:
-            try:
-                data = await reader.read(BUFSIZE)
-            except asyncio.CancelledError:
-                raise
-            except ConnectionResetError:
-                break
+            data = await reader.read(BUFSIZE)
             if not data:
                 break
             writer.write(data)
-
-            try:
-                await writer.drain()
-            except ConnectionResetError:
-                break
-            except asyncio.CancelledError:
-                raise
+            await writer.drain()
 
     async def handler(self, reader, writer):
         peer_addr = writer.transport.get_extra_info('peername')
@@ -79,13 +68,26 @@ class Listener:  # pylint: disable=too-many-instance-attributes
                                                             self._timeout)
             if self._proxy_protocol:
                 dst_writer.write(prologue)
-            await asyncio.gather(self._pump(writer, dst_reader),
-                                 self._pump(dst_writer, reader))
+            t1 = asyncio.ensure_future(self._pump(writer, dst_reader))
+            t2 = asyncio.ensure_future(self._pump(dst_writer, reader))
+            try:
+                await asyncio.gather(t1, t2)
+            finally:
+                for t in (t1, t2):
+                    if not t.done():
+                        t.cancel()
+                        while not t.done():
+                            try:
+                                await t
+                            except asyncio.CancelledError:
+                                pass
         except asyncio.CancelledError:  # pylint: disable=try-except-raise
             raise
         except asyncio.TimeoutError:
             self._logger.error("Dropping client %s due to upstream connection "
                                "wait timed out.", peer_addr)
+        except ConnectionResetError:
+            self._logger.debug("Dropping client %s due to connection reset.", peer_addr)
         except Exception as exc:  # pragma: no cover
             self._logger.exception("Connection handler stopped with exception:"
                                    " %s", str(exc))
