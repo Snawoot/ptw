@@ -1,0 +1,48 @@
+<!--
+Mac OS launch agent plist file
+1. Edit this file to set appropriate file locations, destination host and options
+2. Rename it to strip .example suffic
+3. Place it into ~/Library/LaunchAgents/com.vm-0.ptw.plist
+4. Issue command "launchctl load ~/Library/LaunchAgents/com.vm-0.ptw.plist"
+-->
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.vm-0.ptw</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/user/.venvs/ptw/bin/ptw</string>
+        <string>-v</string>
+        <string>error</string>
+        <string>-l</string>
+        <string>/Users/user/Library/Logs/ptw.log</string>
+        <string>-c</string>
+        <string>/Users/user/.config/ptw/client.pem</string>
+        <string>-k</string>
+        <string>/Users/user/.config/ptw/client.key</string>
+        <string>-C</string>
+        <string>/Users/user/.config/ptw/ca.pem</string>
+        <string>-n</string>
+        <string>50</string>
+        <string>-T</string>
+        <string>300</string>
+        <string>DST_HOST</string>
+        <string>DST_PORT</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardErrorPath</key>
+    <string>/Users/user/Library/Logs/ptw.log</string>
+    <key>StandardOutPath</key>
+    <string>/Users/user/Library/Logs/ptw.log</string>
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>1024</integer>
+    </dict>
+</dict>
+</plist>
