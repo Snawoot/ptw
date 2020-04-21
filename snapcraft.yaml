@@ -1,0 +1,21 @@
+name: ptw
+version: '0.5.5'
+summary: Pooling TLS Wrapper.
+description: >
+  Accepts TCP connections on listen port and forwards them, wrapped in TLS, to
+  destination port. ptw maintains pool of fresh established TLS connections
+  effectively cancelling delay caused by TLS handshake.
+confinement: strict
+base: core18
+
+parts:
+  ptw:
+    plugin: python
+    python-version: python3
+    source: .
+apps:
+  ptw:
+    command: bin/ptw
+    plugs:
+      - network
+      - network-bind
