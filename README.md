@@ -1,5 +1,7 @@
 # ptw
 
+[![ptw](https://snapcraft.io//ptw/badge.svg)](https://snapcraft.io/ptw)
+
 Pooling TLS Wrapper
 
 Accepts TCP connections on listen port and forwards them, wrapped in TLS, to destination port. `ptw` maintains pool of fresh established TLS connections effectively cancelling delay caused by TLS handshake.
@@ -24,11 +26,21 @@ ptw may serve as drop-in replacement for stunnel or haproxy for purpose of secur
 
 ## Installation
 
+#### From source
+
+Run within source directory:
+
+```sh
+pip3 install .
+```
+
+#### From PyPI
+
 ```
 pip3 install ptw
 ```
 
-## Deployment with Docker
+#### Docker
 
 ptw is also provided as docker image. You may run it like this:
 
@@ -37,6 +49,14 @@ docker run -it --rm yarmak/ptw --help
 ```
 
 In addition, there are docker-compose recipes for deployment of client (ptw) and server suite (haproxy with mutual TLS auth, Dante SOCKS proxy and decoy HTTP-server). See [docker\_deploy](https://github.com/Snawoot/ptw/tree/master/docker_deploy) directory for complete docker deployment guide.
+
+#### Snap Store
+
+[![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/ptw)
+
+```sh
+sudo snap install ptw
+```
 
 ## Usage
 

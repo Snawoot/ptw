@@ -1,5 +1,5 @@
 name: ptw
-version: '0.5.5'
+version: '1.0.0'
 summary: Pooling TLS Wrapper.
 description: >
   Accepts TCP connections on listen port and forwards them, wrapped in TLS, to
