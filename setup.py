@@ -6,7 +6,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(name='ptw',
-      version='1.0.0',
+      version='1.0.1',
       description='Pooling TLS Wrapper',
       url='https://github.com/Snawoot/ptw',
       author='Vladislav Yarmak',
